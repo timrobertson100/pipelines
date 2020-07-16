@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
@@ -81,7 +80,6 @@ public class Interpretation<S> {
     public Handler<T> via(Consumer<T> func) {
       return new Handler<>(target).via(func);
     }
-
   }
 
   @AllArgsConstructor(access = AccessLevel.PRIVATE)
@@ -91,7 +89,7 @@ public class Interpretation<S> {
 
     /**
      * @param func BiConsumer for applying an interpretation function, where S as a source data
-     * object and T as a target data object
+     *     object and T as a target data object
      */
     public Handler<T> via(BiConsumer<S, T> func) {
       Optional.ofNullable(target).ifPresent(t -> func.accept(source, t));
@@ -100,7 +98,7 @@ public class Interpretation<S> {
 
     /**
      * @param func Consumer for applying an interpretation function, where T as a source data object
-     * and as a target data object
+     *     and as a target data object
      */
     public Handler<T> via(Consumer<T> func) {
       Optional.ofNullable(target).ifPresent(func);

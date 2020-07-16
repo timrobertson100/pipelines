@@ -1,10 +1,15 @@
 package org.gbif.pipelines.core.interpreters.extension;
 
+import static org.gbif.api.vocabulary.OccurrenceIssue.MULTIMEDIA_DATE_INVALID;
+import static org.gbif.api.vocabulary.OccurrenceIssue.MULTIMEDIA_URI_INVALID;
+
+import com.google.common.base.Strings;
 import java.net.URI;
 import java.time.temporal.Temporal;
 import java.util.Objects;
 import java.util.Optional;
-
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.gbif.api.vocabulary.Extension;
 import org.gbif.api.vocabulary.OccurrenceIssue;
 import org.gbif.common.parsers.LicenseUriParser;
@@ -25,15 +30,9 @@ import org.gbif.pipelines.parsers.parsers.location.parser.CoordinateParseUtils;
 import org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporal;
 import org.gbif.pipelines.parsers.parsers.temporal.TemporalParser;
 
-import com.google.common.base.Strings;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-
-import static org.gbif.api.vocabulary.OccurrenceIssue.MULTIMEDIA_DATE_INVALID;
-import static org.gbif.api.vocabulary.OccurrenceIssue.MULTIMEDIA_URI_INVALID;
-
 /**
- * Interpreter for the Image extension, Interprets form {@link ExtendedRecord} to {@link ImageRecord}.
+ * Interpreter for the Image extension, Interprets form {@link ExtendedRecord} to {@link
+ * ImageRecord}.
  *
  * @see <a href="http://rs.gbif.org/extension/gbif/1.0/images.xml</a>
  */
@@ -59,14 +58,18 @@ public class ImageInterpreter {
           .map(DcTerm.audience, Image::setAudience)
           .map(DcTerm.rightsHolder, Image::setRightsHolder)
           .map(DwcTerm.datasetID, Image::setDatasetId)
-          .map("http://www.w3.org/2003/01/geo/wgs84_pos#longitude", ImageInterpreter::parseAndSetLongitude)
-          .map("http://www.w3.org/2003/01/geo/wgs84_pos#latitude", ImageInterpreter::parseAndSetLatitude)
+          .map(
+              "http://www.w3.org/2003/01/geo/wgs84_pos#longitude",
+              ImageInterpreter::parseAndSetLongitude)
+          .map(
+              "http://www.w3.org/2003/01/geo/wgs84_pos#latitude",
+              ImageInterpreter::parseAndSetLatitude)
           .postMap(ImageInterpreter::parseAndSetLatLng)
           .skipIf(ImageInterpreter::checkLinks);
 
   /**
-   * Interprets images of a {@link ExtendedRecord} and populates a {@link ImageRecord}
-   * with the interpreted values.
+   * Interprets images of a {@link ExtendedRecord} and populates a {@link ImageRecord} with the
+   * interpreted values.
    */
   public static void interpret(ExtendedRecord er, ImageRecord mr) {
     Objects.requireNonNull(er);
@@ -78,17 +81,13 @@ public class ImageInterpreter {
     mr.getIssues().setIssueList(result.getIssuesAsList());
   }
 
-  /**
-   * Parser for "http://purl.org/dc/terms/references" term value
-   */
+  /** Parser for "http://purl.org/dc/terms/references" term value */
   private static void parseAndSetReferences(Image i, String v) {
     URI uri = UrlParser.parse(v);
     Optional.ofNullable(uri).map(URI::toString).ifPresent(i::setReferences);
   }
 
-  /**
-   * Parser for "http://purl.org/dc/terms/identifier" term value
-   */
+  /** Parser for "http://purl.org/dc/terms/identifier" term value */
   private static String parseAndSetIdentifier(Image i, String v) {
     URI uri = UrlParser.parse(v);
     Optional<URI> uriOpt = Optional.ofNullable(uri);
@@ -105,9 +104,7 @@ public class ImageInterpreter {
     return "";
   }
 
-  /**
-   * Parser for "http://purl.org/dc/terms/created" term value
-   */
+  /** Parser for "http://purl.org/dc/terms/created" term value */
   private static String parseAndSetCreated(Image i, String v) {
     ParsedTemporal parsed = TemporalParser.parse(v);
     parsed.getFromOpt().map(Temporal::toString).ifPresent(i::setCreated);
@@ -115,9 +112,7 @@ public class ImageInterpreter {
     return parsed.getIssues().isEmpty() ? "" : MULTIMEDIA_DATE_INVALID.name();
   }
 
-  /**
-   * Parser for "http://www.w3.org/2003/01/geo/wgs84_pos#longitude" term value
-   */
+  /** Parser for "http://www.w3.org/2003/01/geo/wgs84_pos#longitude" term value */
   private static void parseAndSetLongitude(Image i, String v) {
     if (!Strings.isNullOrEmpty(v)) {
       Double lat = NumberParser.parseDouble(v);
@@ -125,9 +120,7 @@ public class ImageInterpreter {
     }
   }
 
-  /**
-   * Parser for "http://www.w3.org/2003/01/geo/wgs84_pos#latitude" term value
-   */
+  /** Parser for "http://www.w3.org/2003/01/geo/wgs84_pos#latitude" term value */
   private static void parseAndSetLatitude(Image i, String v) {
     if (!Strings.isNullOrEmpty(v)) {
       Double lng = NumberParser.parseDouble(v);
@@ -135,9 +128,7 @@ public class ImageInterpreter {
     }
   }
 
-  /**
-   * Parse and check coordinates
-   */
+  /** Parse and check coordinates */
   private static void parseAndSetLatLng(Image i) {
     if (i.getLatitude() != null && i.getLongitude() != null) {
       String lat = Optional.ofNullable(i.getLatitude()).map(Object::toString).orElse(null);
@@ -160,14 +151,11 @@ public class ImageInterpreter {
     }
   }
 
-  /**
-   * Skip whole record if both links are absent
-   */
+  /** Skip whole record if both links are absent */
   private static Optional<String> checkLinks(Image i) {
     if (i.getReferences() == null && i.getIdentifier() == null) {
       return Optional.of(MULTIMEDIA_URI_INVALID.name());
     }
     return Optional.empty();
   }
-
 }
