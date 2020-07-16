@@ -1,5 +1,12 @@
 package org.gbif.pipelines.core.interpreters.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Year;
@@ -13,7 +20,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
-
+import org.apache.commons.lang3.time.DateFormatUtils;
 import org.gbif.api.vocabulary.OccurrenceIssue;
 import org.gbif.common.parsers.core.OccurrenceParseResult;
 import org.gbif.common.parsers.core.ParseResult;
@@ -21,16 +28,7 @@ import org.gbif.dwc.terms.DcTerm;
 import org.gbif.dwc.terms.DwcTerm;
 import org.gbif.pipelines.io.avro.ExtendedRecord;
 import org.gbif.pipelines.io.avro.TemporalRecord;
-
-import org.apache.commons.lang3.time.DateFormatUtils;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class TemporalInterpreterTest {
 
@@ -38,7 +36,7 @@ public class TemporalInterpreterTest {
   public void testAllDates() {
     Map<String, String> map = new HashMap<>();
     map.put(DwcTerm.year.qualifiedName(), "1879");
-    map.put(DwcTerm.month.qualifiedName(), "11 "); //keep the space at the end
+    map.put(DwcTerm.month.qualifiedName(), "11 "); // keep the space at the end
     map.put(DwcTerm.day.qualifiedName(), "1");
     map.put(DwcTerm.eventDate.qualifiedName(), "1.11.1879");
     map.put(DwcTerm.dateIdentified.qualifiedName(), "2012-01-11");
@@ -82,8 +80,8 @@ public class TemporalInterpreterTest {
     assertEquals(LocalDate.of(2005, 1, 1), result.getPayload());
     assertEquals(0, result.getIssues().size());
 
-    //ensure that eventDate with more precision will not record an issue and the one with most precision
-    //will be returned
+    // ensure that eventDate with more precision will not record an issue and the one with most precision
+    // will be returned
     result = TemporalInterpreter.interpretRecordedDate("1996", "1", "26", "1996-01-26T01:00Z");
     assertEquals(ZonedDateTime.of(LocalDateTime.of(1996, 1, 26, 1, 0), ZoneId.of("Z")), result.getPayload());
     assertEquals(0, result.getIssues().size());
@@ -195,13 +193,11 @@ public class TemporalInterpreterTest {
     assertResult(1957, 3, 22, result);
   }
 
-  /**
-   * 0 month now fails.
-   */
+  /** 0 month now fails. */
   @Test
   public void test0Month() {
     ParseResult<TemporalAccessor> result = interpretRecordedDate("1984", "0", "22", null);
-    //assertResult(1984, null, 22, null, result);
+    // assertResult(1984, null, 22, null, result);
     assertFalse(result.isSuccessful());
   }
 
@@ -312,9 +308,7 @@ public class TemporalInterpreterTest {
     assertEquals(0, result.getIssues().size());
   }
 
-  /**
-   * https://github.com/gbif/parsers/issues/8
-   */
+  /** https://github.com/gbif/parsers/issues/8 */
   @Test
   public void testDifferentResolutions() {
     OccurrenceParseResult<TemporalAccessor> result;
@@ -340,9 +334,7 @@ public class TemporalInterpreterTest {
     assertEquals(0, result.getIssues().size());
   }
 
-  /**
-   * https://github.com/gbif/parsers/issues/6
-   */
+  /** https://github.com/gbif/parsers/issues/6 */
   @Test
   public void testLessConfidentMatch() {
     OccurrenceParseResult<TemporalAccessor> result;
@@ -352,9 +344,7 @@ public class TemporalInterpreterTest {
     assertEquals(0, result.getIssues().size());
   }
 
-  /**
-   * Only month now fails
-   */
+  /** Only month now fails */
   @Test
   public void testOnlyMonth() {
     ParseResult<TemporalAccessor> result = interpretRecordedDate(null, "3", null, null);
@@ -362,19 +352,17 @@ public class TemporalInterpreterTest {
     assertFalse(result.isSuccessful());
   }
 
-  /**
-   * Only day now fails
-   */
+  /** Only day now fails */
   @Test
   public void testOnlyDay() {
     ParseResult<TemporalAccessor> result = interpretRecordedDate(null, null, "23", null);
-    //assertResult(null, null, 23, null, result);
+    // assertResult(null, null, 23, null, result);
     assertFalse(result.isSuccessful());
   }
 
   /**
-   * Tests that a date representing 'now' is interpreted with CONFIDENCE.DEFINITE even after v1TemporalInterpreter
-   * was instantiated. See POR-2860.
+   * Tests that a date representing 'now' is interpreted with CONFIDENCE.DEFINITE even after v1TemporalInterpreter was
+   * instantiated. See POR-2860.
    */
   @Test
   public void testNow() {
@@ -428,13 +416,12 @@ public class TemporalInterpreterTest {
     assertResult(Year.of(1999), interpretEventDate("1999"));
     assertResult(Year.of(1999), interpretEventDate("1999/2000"));
     assertResult(YearMonth.of(1999, 01), interpretEventDate("1999-01/1999-12"));
-    assertResult(ZonedDateTime.of(LocalDateTime.of(2004, 12, 30, 00, 00, 00, 00), ZoneOffset.UTC),
+    assertResult(
+        ZonedDateTime.of(LocalDateTime.of(2004, 12, 30, 00, 00, 00, 00), ZoneOffset.UTC),
         interpretEventDate("2004-12-30T00:00:00+0000/2005-03-13T24:00:00+0000"));
   }
 
-  /**
-   * @param expected expected date in ISO yyyy-MM-dd format
-   */
+  /** @param expected expected date in ISO yyyy-MM-dd format */
   private void assertDate(String expected, String result) {
     if (expected == null) {
       assertNull(result);
@@ -453,8 +440,8 @@ public class TemporalInterpreterTest {
   }
 
   /**
-   * Utility method to assert a ParseResult when a LocalDate is expected.
-   * This method should not be used to test expected null results.
+   * Utility method to assert a ParseResult when a LocalDate is expected. This method should not be used to test
+   * expected null results.
    */
   private void assertResult(Integer y, Integer m, Integer d, ParseResult<TemporalAccessor> result) {
     // sanity checks
@@ -473,8 +460,8 @@ public class TemporalInterpreterTest {
   }
 
   /**
-   * Utility method to assert a ParseResult when a YearMonth is expected.
-   * This method should not be used to test expected null results.
+   * Utility method to assert a ParseResult when a YearMonth is expected. This method should not be used to test
+   * expected null results.
    */
   private void assertResult(Integer y, Integer m, ParseResult<TemporalAccessor> result) {
     // sanity checks
@@ -525,5 +512,4 @@ public class TemporalInterpreterTest {
 
     return TemporalInterpreter.interpretRecordedDate(er);
   }
-
 }

@@ -1,5 +1,6 @@
 package org.gbif.pipelines.core.interpreters.metadata;
 
+import com.google.common.base.Strings;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Comparator;
@@ -10,7 +11,8 @@ import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.gbif.api.model.registry.MachineTag;
 import org.gbif.api.util.VocabularyUtils;
 import org.gbif.api.vocabulary.EndpointType;
@@ -22,10 +24,6 @@ import org.gbif.pipelines.parsers.ws.client.metadata.MetadataServiceClient;
 import org.gbif.pipelines.parsers.ws.client.metadata.response.Dataset;
 import org.gbif.pipelines.parsers.ws.client.metadata.response.Network;
 import org.gbif.pipelines.parsers.ws.client.metadata.response.Organization;
-
-import com.google.common.base.Strings;
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 
 /** Interprets GBIF metadata by datasetId */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -83,41 +81,50 @@ public class MetadataInterpreter {
 
   /** Returns ENUM instead of url string */
   private static License getLicense(String url) {
-    URI uri = Optional.ofNullable(url).map(x -> {
-      try {
-        return URI.create(x);
-      } catch (IllegalArgumentException ex) {
-        return null;
-      }
-    }).orElse(null);
+    URI uri =
+        Optional.ofNullable(url)
+            .map(
+                x -> {
+                  try {
+                    return URI.create(x);
+                  } catch (IllegalArgumentException ex) {
+                    return null;
+                  }
+                })
+            .orElse(null);
     License license = LicenseParser.getInstance().parseUriThenTitle(uri, null);
-    //UNSPECIFIED must be mapped to null
+    // UNSPECIFIED must be mapped to null
     return License.UNSPECIFIED == license ? null : license;
   }
 
   /** Gets the latest crawl attempt time, if exists. */
   private static Optional<Date> getLastCrawledDate(List<MachineTag> machineTags) {
     return Optional.ofNullable(machineTags)
-        .flatMap(x -> x.stream()
-            .filter(tag -> TagName.CRAWL_ATTEMPT.getName().equals(tag.getName())
-                && TagName.CRAWL_ATTEMPT.getNamespace().getNamespace().equals(tag.getNamespace()))
-            .sorted(Comparator.comparing(MachineTag::getCreated).reversed())
-            .map(MachineTag::getCreated)
-            .findFirst());
+        .flatMap(
+            x ->
+                x.stream()
+                    .filter(
+                        tag ->
+                            TagName.CRAWL_ATTEMPT.getName().equals(tag.getName())
+                                && TagName.CRAWL_ATTEMPT.getNamespace().getNamespace().equals(tag.getNamespace()))
+                    .sorted(Comparator.comparing(MachineTag::getCreated).reversed())
+                    .map(MachineTag::getCreated)
+                    .findFirst());
   }
 
   /** Copy MachineTags into the Avro Metadata record. */
   private static void copyMachineTags(List<MachineTag> machineTags, MetadataRecord mdr) {
-     if (Objects.nonNull(machineTags) && !machineTags.isEmpty()) {
-        mdr.setMachineTags(
-           machineTags.stream()
-             .map(machineTag -> org.gbif.pipelines.io.avro.MachineTag.newBuilder()
-                                  .setNamespace(machineTag.getNamespace())
-                                  .setName(machineTag.getName())
-                                  .setValue(machineTag.getValue())
-                                  .build())
-             .collect(Collectors.toList()));
-     }
+    if (Objects.nonNull(machineTags) && !machineTags.isEmpty()) {
+      mdr.setMachineTags(
+          machineTags.stream()
+              .map(
+                  machineTag ->
+                      org.gbif.pipelines.io.avro.MachineTag.newBuilder()
+                          .setNamespace(machineTag.getNamespace())
+                          .setName(machineTag.getName())
+                          .setValue(machineTag.getValue())
+                          .build())
+              .collect(Collectors.toList()));
+    }
   }
-
 }

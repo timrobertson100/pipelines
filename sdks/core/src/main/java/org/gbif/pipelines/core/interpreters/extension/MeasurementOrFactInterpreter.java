@@ -1,5 +1,8 @@
 package org.gbif.pipelines.core.interpreters.extension;
 
+import static org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporalIssue.DATE_INVALID;
+import static org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporalIssue.DATE_UNLIKELY;
+
 import java.time.temporal.Temporal;
 import java.util.EnumMap;
 import java.util.List;
@@ -8,7 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.gbif.api.vocabulary.Extension;
 import org.gbif.dwc.terms.DwcTerm;
 import org.gbif.pipelines.core.ExtensionInterpretation;
@@ -22,12 +26,6 @@ import org.gbif.pipelines.parsers.parsers.SimpleTypeParser;
 import org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporal;
 import org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporalIssue;
 import org.gbif.pipelines.parsers.parsers.temporal.TemporalParser;
-
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-
-import static org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporalIssue.DATE_INVALID;
-import static org.gbif.pipelines.parsers.parsers.temporal.ParsedTemporalIssue.DATE_UNLIKELY;
 
 /**
  * Interpreter for the MeasurementsOrFacts extension, Interprets form {@link ExtendedRecord} to {@link
@@ -59,8 +57,8 @@ public class MeasurementOrFactInterpreter {
           .map(DwcTerm.measurementDeterminedDate, MeasurementOrFactInterpreter::parseAndSetDeterminedDate);
 
   /**
-   * Interprets measurements or facts of a {@link ExtendedRecord} and populates a {@link MeasurementOrFactRecord}
-   * with the interpreted values.
+   * Interprets measurements or facts of a {@link ExtendedRecord} and populates a {@link MeasurementOrFactRecord} with
+   * the interpreted values.
    */
   public static void interpret(ExtendedRecord er, MeasurementOrFactRecord mfr) {
     Objects.requireNonNull(er);
@@ -72,9 +70,7 @@ public class MeasurementOrFactInterpreter {
     mfr.getIssues().setIssueList(result.getIssuesAsList());
   }
 
-  /**
-   * Parser for "http://rs.tdwg.org/dwc/terms/measurementDeterminedDate" term value
-   */
+  /** Parser for "http://rs.tdwg.org/dwc/terms/measurementDeterminedDate" term value */
   private static List<String> parseAndSetDeterminedDate(MeasurementOrFact mf, String v) {
 
     ParsedTemporal parsed = TemporalParser.parse(v);
@@ -87,22 +83,20 @@ public class MeasurementOrFactInterpreter {
     mf.setDeterminedDateParsed(determinedDate);
     mf.setDeterminedDate(v);
 
-    return parsed.getIssues().stream()
-        .map(DATE_ISSUE_MAP::get)
-        .filter(Objects::nonNull)
-        .collect(Collectors.toList());
+    return parsed.getIssues().stream().map(DATE_ISSUE_MAP::get).filter(Objects::nonNull).collect(Collectors.toList());
   }
 
-  /**
-   * Parser for "http://rs.tdwg.org/dwc/terms/measurementValue" term value, tries to parse if it is a Double
-   */
+  /** Parser for "http://rs.tdwg.org/dwc/terms/measurementValue" term value, tries to parse if it is a Double */
   private static void parseAndSetValue(MeasurementOrFact mf, String v) {
     mf.setValue(v);
-    Consumer<Optional<Double>> fn = result -> result.ifPresent(x -> {
-      if (!x.isInfinite() && !x.isNaN()) {
-        mf.setValueParsed(x);
-      }
-    });
+    Consumer<Optional<Double>> fn =
+        result ->
+            result.ifPresent(
+                x -> {
+                  if (!x.isInfinite() && !x.isNaN()) {
+                    mf.setValueParsed(x);
+                  }
+                });
     SimpleTypeParser.parseDouble(v, fn);
   }
 }
