@@ -2,12 +2,12 @@ package org.gbif.pipelines.maven;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.maven.plugin.AbstractMojo;
@@ -66,6 +66,14 @@ public class AvroPostprocessMojo extends AbstractMojo {
   @Parameter(property = "postprocess.defaultPackage", defaultValue = DEFAULT)
   private String defaultPackage;
 
+  /** Hard coded interfaces to inject on the Avro classes. */
+  static Map<String, Set<String>> INTERFACE_MAPPING = new HashMap<>();
+  static {
+    INTERFACE_MAPPING.put(
+        "org.gbif.pipelines.io.avro.BlastResult",
+        Set.of("org.example.NewInterface", "org.example.Logging"));
+  }
+
   @Override
   public void execute() {
 
@@ -102,6 +110,11 @@ public class AvroPostprocessMojo extends AbstractMojo {
     addAvroCodecAnnotation(lines, idxs);
 
     writeFile(path, lines, idxs);
+
+    // Inject additional interfaces if specified
+    getLog().info("**** BINGO - " + toFullyQualifiedClassName(path));
+    InterfaceInjector.addInterfaces(
+        getLog(), path, INTERFACE_MAPPING.get(toFullyQualifiedClassName(path)));
   }
 
   /**
@@ -260,5 +273,11 @@ public class AvroPostprocessMojo extends AbstractMojo {
     } catch (IOException ex) {
       throw new IllegalStateException(ex.getMessage(), ex);
     }
+  }
+
+  /** Converts the path to the class name */
+  public static String toFullyQualifiedClassName(Path filePath) {
+    String path = filePath.toString().replace(".java", "").replace(File.separatorChar, '.');
+    return path.substring(path.indexOf("org.gbif"));
   }
 }
